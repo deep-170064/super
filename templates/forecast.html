@@ -1,0 +1,633 @@
+{% extends "layout.html" %}
+
+{% block title %}Sales Forecasting - Supermarket Sales Dashboard{% endblock %}
+
+{% block additional_head %}
+<style>
+.forecast-options {
+    background-color: rgba(33, 37, 41, 0.8);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.forecast-stats {
+    transition: all 0.3s ease;
+}
+.forecast-stats:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2"><i class="fas fa-chart-line me-2"></i>Sales Forecasting</h1>
+        <div>
+            <button class="btn btn-outline-primary" id="downloadForecastBtn" disabled>
+                <i class="fas fa-download me-1"></i>Download Forecast
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card bg-dark mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="fas fa-cogs me-2"></i>Forecast Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <form id="forecastForm">
+                        <div class="mb-3">
+                            <label for="forecastPeriods" class="form-label">Forecast Period (Days)</label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="form-range me-2" id="forecastPeriods" min="7" max="90" step="7" value="30">
+                                <span id="forecastPeriodsValue">30</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label d-block">Seasonality Options</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="yearlySeasonality" checked>
+                                <label class="form-check-label" for="yearlySeasonality">Yearly Seasonality</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="weeklySeasonality" checked>
+                                <label class="form-check-label" for="weeklySeasonality">Weekly Seasonality</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dailySeasonality">
+                                <label class="form-check-label" for="dailySeasonality">Daily Seasonality</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="encodingForecast" class="form-label">File Encoding</label>
+                            <select class="form-select" id="encodingForecast">
+                                <option value="utf-8" selected>UTF-8</option>
+                                <option value="latin1">Latin-1</option>
+                                <option value="cp1252">Windows-1252</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="generateForecastBtn">
+                                <i class="fas fa-play me-1"></i>Generate Forecast
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card bg-dark mb-4">
+                <div class="card-header bg-info">
+                    <h5 class="card-title mb-0"><i class="fas fa-filter me-2"></i>Data Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form id="forecastFilterForm">
+                        <div class="mb-3">
+                            <label for="categoryFilterForecast" class="form-label">Product Category</label>
+                            <select class="form-select" id="categoryFilterForecast">
+                                <option value="All" selected>All Categories</option>
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="customerTypeFilterForecast" class="form-label">Customer Type</label>
+                            <select class="form-select" id="customerTypeFilterForecast">
+                                <option value="All" selected>All Types</option>
+                                <!-- Will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Training Date Range</label>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <input type="date" class="form-control" id="startDateForecast">
+                                </div>
+                                <div class="col-auto">to</div>
+                                <div class="col">
+                                    <input type="date" class="form-control" id="endDateForecast">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-filter me-1"></i>Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card bg-dark mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i>Sales Forecast</h5>
+                </div>
+                <div class="card-body">
+                    <div id="forecastMessage" class="text-center py-5">
+                        <p class="mb-0">Configure the forecast parameters and click "Generate Forecast" to see predictions.</p>
+                    </div>
+                    <div id="forecastChartContainer" style="display: none;">
+                        <div id="forecastChart" style="width: 100%; height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row" id="forecastStatsRow" style="display: none;">
+                <div class="col-md-4">
+                    <div class="card bg-dark forecast-stats">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Average Forecasted Sales</h6>
+                            <h3 id="avgForecastSales">0</h3>
+                            <span id="avgForecastDiff" class="badge rounded-pill bg-success">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark forecast-stats">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Forecasted Peak Day</h6>
+                            <h3 id="peakForecastDay">N/A</h3>
+                            <span id="peakForecastValue">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark forecast-stats">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">Forecast Accuracy</h6>
+                            <h3 id="forecastAccuracy">N/A</h3>
+                            <span id="accuracyDetails">Based on historical data</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-dark mb-4" id="forecastComponentsCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-puzzle-piece me-2"></i>Forecast Components</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div id="trendComponent" style="width: 100%; height: 250px;"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div id="weeklyComponent" style="width: 100%; height: 250px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-dark" id="forecastInsightsCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-lightbulb me-2"></i>Forecast Insights</h5>
+                </div>
+                <div class="card-body">
+                    <div id="forecastInsights">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="forecastLoadingOverlay">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2">Generating forecast...</div>
+</div>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize forecast page
+    initializeForecast();
+    
+    // Forecast periods slider
+    const forecastPeriods = document.getElementById('forecastPeriods');
+    const forecastPeriodsValue = document.getElementById('forecastPeriodsValue');
+    
+    forecastPeriods.addEventListener('input', function() {
+        forecastPeriodsValue.textContent = this.value;
+    });
+    
+    // Forecast form submission
+    document.getElementById('forecastForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        generateForecast();
+    });
+    
+    // Forecast filter form submission
+    document.getElementById('forecastFilterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        applyForecastFilters();
+    });
+});
+
+function generateForecast() {
+    // Show loading overlay
+    document.getElementById('forecastLoadingOverlay').style.display = 'flex';
+    
+    // Get form values
+    const periods = document.getElementById('forecastPeriods').value;
+    const yearlySeasonality = document.getElementById('yearlySeasonality').checked;
+    const weeklySeasonality = document.getElementById('weeklySeasonality').checked;
+    const dailySeasonality = document.getElementById('dailySeasonality').checked;
+    const encoding = document.getElementById('encodingForecast').value;
+    
+    // Get filter values
+    const category = document.getElementById('categoryFilterForecast').value;
+    const customerType = document.getElementById('customerTypeFilterForecast').value;
+    const startDate = document.getElementById('startDateForecast').value;
+    const endDate = document.getElementById('endDateForecast').value;
+    
+    // Prepare request body
+    const requestBody = {
+        periods: parseInt(periods),
+        encoding: encoding,
+        yearly_seasonality: yearlySeasonality,
+        weekly_seasonality: weeklySeasonality,
+        daily_seasonality: dailySeasonality,
+        filters: {
+            category: category,
+            customer_type: customerType,
+            date_range: [startDate, endDate].filter(Boolean)
+        }
+    };
+    
+    // Fetch forecast data from API
+    fetch('/api/sales-forecast', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayForecast(data);
+            document.getElementById('downloadForecastBtn').disabled = false;
+        } else {
+            showForecastError(data.error || 'Failed to generate forecast');
+        }
+    })
+    .catch(error => {
+        showForecastError('Error generating forecast: ' + error);
+    })
+    .finally(() => {
+        // Hide loading overlay
+        document.getElementById('forecastLoadingOverlay').style.display = 'none';
+    });
+}
+
+function displayForecast(data) {
+    // Hide message and show chart
+    document.getElementById('forecastMessage').style.display = 'none';
+    document.getElementById('forecastChartContainer').style.display = 'block';
+    document.getElementById('forecastStatsRow').style.display = 'flex';
+    document.getElementById('forecastComponentsCard').style.display = 'block';
+    document.getElementById('forecastInsightsCard').style.display = 'block';
+    
+    // Create forecast chart
+    const forecastData = data.forecast;
+    
+    // Calculate actual vs predicted stats
+    const actualValues = forecastData.y.filter(v => v > 0);
+    const predictedValues = forecastData.yhat.slice(0, actualValues.length);
+    
+    // Calculate average forecasted sales
+    const avgHistorical = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
+    const avgForecast = forecastData.yhat.slice(-data.periods).reduce((sum, val) => sum + val, 0) / data.periods;
+    const percentChange = ((avgForecast - avgHistorical) / avgHistorical) * 100;
+    
+    // Update stats
+    document.getElementById('avgForecastSales').textContent = avgForecast.toFixed(2);
+    const avgForecastDiff = document.getElementById('avgForecastDiff');
+    avgForecastDiff.textContent = `${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%`;
+    avgForecastDiff.className = `badge rounded-pill ${percentChange >= 0 ? 'bg-success' : 'bg-danger'}`;
+    
+    // Find peak day
+    const futureYhat = forecastData.yhat.slice(-data.periods);
+    const maxIndex = futureYhat.indexOf(Math.max(...futureYhat));
+    const peakDate = new Date(forecastData.ds[forecastData.ds.length - data.periods + maxIndex]);
+    document.getElementById('peakForecastDay').textContent = peakDate.toLocaleDateString();
+    document.getElementById('peakForecastValue').textContent = Math.max(...futureYhat).toFixed(2);
+    
+    // Calculate simple accuracy metric (lower is better)
+    let mape = 0;
+    if (actualValues.length > 0) {
+        const absPctErrors = actualValues.map((actual, i) => 
+            Math.abs((actual - predictedValues[i]) / actual) * 100
+        );
+        mape = absPctErrors.reduce((sum, val) => sum + val, 0) / absPctErrors.length;
+        const accuracy = Math.max(0, 100 - mape).toFixed(1);
+        document.getElementById('forecastAccuracy').textContent = `${accuracy}%`;
+        document.getElementById('accuracyDetails').textContent = `MAPE: ${mape.toFixed(2)}%`;
+    } else {
+        document.getElementById('forecastAccuracy').textContent = 'N/A';
+        document.getElementById('accuracyDetails').textContent = 'Insufficient historical data';
+    }
+    
+    // Create forecast chart
+    const trace1 = {
+        x: forecastData.ds,
+        y: forecastData.y,
+        mode: 'markers',
+        name: 'Historical',
+        marker: {
+            color: 'rgba(255, 255, 255, 0.8)',
+            size: 5
+        }
+    };
+    
+    const trace2 = {
+        x: forecastData.ds,
+        y: forecastData.yhat,
+        mode: 'lines',
+        name: 'Forecast',
+        line: {
+            color: 'rgba(0, 123, 255, 1)',
+            width: 2
+        }
+    };
+    
+    const trace3 = {
+        x: forecastData.ds,
+        y: forecastData.yhat_upper,
+        mode: 'lines',
+        name: 'Upper Bound',
+        line: {
+            color: 'rgba(0, 123, 255, 0.3)',
+            width: 0
+        },
+        fill: 'tonexty'
+    };
+    
+    const trace4 = {
+        x: forecastData.ds,
+        y: forecastData.yhat_lower,
+        mode: 'lines',
+        name: 'Lower Bound',
+        line: {
+            color: 'rgba(0, 123, 255, 0.3)',
+            width: 0
+        },
+        fill: 'tonexty'
+    };
+    
+    const layout = {
+        title: 'Sales Forecast',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: {
+            color: '#fff'
+        },
+        xaxis: {
+            title: 'Date',
+            gridcolor: 'rgba(255,255,255,0.1)'
+        },
+        yaxis: {
+            title: 'Sales',
+            gridcolor: 'rgba(255,255,255,0.1)'
+        },
+        legend: {
+            orientation: 'h',
+            y: -0.2
+        },
+        margin: {
+            l: 60,
+            r: 30,
+            t: 50,
+            b: 80
+        }
+    };
+    
+    Plotly.newPlot('forecastChart', [trace1, trace2, trace3, trace4], layout);
+    
+    // Display components if available
+    if (data.components) {
+        // Trend component
+        if (data.components.trend) {
+            const trendTrace = {
+                x: data.components.trend.x,
+                y: data.components.trend.y,
+                mode: 'lines',
+                name: 'Trend',
+                line: {
+                    color: 'rgba(255, 193, 7, 1)',
+                    width: 2
+                }
+            };
+            
+            const trendLayout = {
+                title: 'Trend Component',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    color: '#fff'
+                },
+                xaxis: {
+                    title: 'Date',
+                    gridcolor: 'rgba(255,255,255,0.1)'
+                },
+                yaxis: {
+                    title: 'Trend Value',
+                    gridcolor: 'rgba(255,255,255,0.1)'
+                },
+                margin: {
+                    l: 60,
+                    r: 30,
+                    t: 50,
+                    b: 50
+                }
+            };
+            
+            Plotly.newPlot('trendComponent', [trendTrace], trendLayout);
+        }
+        
+        // Weekly component
+        if (data.components.weekly) {
+            const weeklyTrace = {
+                x: data.components.weekly.x,
+                y: data.components.weekly.y,
+                type: 'bar',
+                name: 'Weekly Pattern',
+                marker: {
+                    color: 'rgba(13, 202, 240, 0.8)'
+                }
+            };
+            
+            const weeklyLayout = {
+                title: 'Weekly Seasonality Component',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: {
+                    color: '#fff'
+                },
+                xaxis: {
+                    title: 'Day of Week',
+                    gridcolor: 'rgba(255,255,255,0.1)'
+                },
+                yaxis: {
+                    title: 'Effect on Sales',
+                    gridcolor: 'rgba(255,255,255,0.1)'
+                },
+                margin: {
+                    l: 60,
+                    r: 30,
+                    t: 50,
+                    b: 50
+                }
+            };
+            
+            Plotly.newPlot('weeklyComponent', [weeklyTrace], weeklyLayout);
+        }
+    }
+    
+    // Generate insights
+    generateForecastInsights(data);
+}
+
+function generateForecastInsights(data) {
+    const insightsContainer = document.getElementById('forecastInsights');
+    insightsContainer.innerHTML = '';
+    
+    const forecast = data.forecast;
+    const periods = data.periods;
+    
+    // Calculate trends
+    const futureYhat = forecast.yhat.slice(-periods);
+    const avgForecast = futureYhat.reduce((sum, val) => sum + val, 0) / periods;
+    
+    const actualValues = forecast.y.filter(v => v > 0);
+    const avgHistorical = actualValues.reduce((sum, val) => sum + val, 0) / actualValues.length;
+    
+    const percentChange = ((avgForecast - avgHistorical) / avgHistorical) * 100;
+    
+    // Find peak and trough days
+    const maxIndex = futureYhat.indexOf(Math.max(...futureYhat));
+    const minIndex = futureYhat.indexOf(Math.min(...futureYhat));
+    
+    const peakDate = new Date(forecast.ds[forecast.ds.length - periods + maxIndex]);
+    const troughDate = new Date(forecast.ds[forecast.ds.length - periods + minIndex]);
+    
+    // Generate insights
+    const insights = [];
+    
+    // Overall trend
+    if (percentChange > 10) {
+        insights.push(`
+            <div class="alert alert-success">
+                <h5><i class="fas fa-arrow-up me-2"></i>Strong Growth Trend</h5>
+                <p>Sales are forecasted to increase by <strong>${percentChange.toFixed(1)}%</strong> over the next ${periods} days compared to historical average.</p>
+                <p><strong>Recommendation:</strong> Ensure inventory levels are increased to meet growing demand.</p>
+            </div>
+        `);
+    } else if (percentChange > 0) {
+        insights.push(`
+            <div class="alert alert-info">
+                <h5><i class="fas fa-arrow-up me-2"></i>Moderate Growth Trend</h5>
+                <p>Sales are forecasted to increase by <strong>${percentChange.toFixed(1)}%</strong> over the next ${periods} days.</p>
+                <p><strong>Recommendation:</strong> Maintain current inventory levels and monitor growth.</p>
+            </div>
+        `);
+    } else if (percentChange > -10) {
+        insights.push(`
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-arrow-down me-2"></i>Slight Decline Trend</h5>
+                <p>Sales are forecasted to decrease by <strong>${Math.abs(percentChange).toFixed(1)}%</strong> over the next ${periods} days.</p>
+                <p><strong>Recommendation:</strong> Consider light promotions to boost sales.</p>
+            </div>
+        `);
+    } else {
+        insights.push(`
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-arrow-down me-2"></i>Significant Decline Trend</h5>
+                <p>Sales are forecasted to decrease by <strong>${Math.abs(percentChange).toFixed(1)}%</strong> over the next ${periods} days.</p>
+                <p><strong>Recommendation:</strong> Implement promotional campaigns and review pricing strategies.</p>
+            </div>
+        `);
+    }
+    
+    // Peak and trough days
+    insights.push(`
+        <div class="alert alert-light">
+            <h5><i class="fas fa-calendar-alt me-2"></i>Key Dates</h5>
+            <ul class="mb-0">
+                <li><strong>Peak sales day:</strong> ${peakDate.toLocaleDateString()} (${forecast.yhat[forecast.ds.length - periods + maxIndex].toFixed(2)})</li>
+                <li><strong>Lowest sales day:</strong> ${troughDate.toLocaleDateString()} (${forecast.yhat[forecast.ds.length - periods + minIndex].toFixed(2)})</li>
+            </ul>
+            <p class="mt-2"><strong>Recommendation:</strong> Ensure adequate staffing on peak days and consider promotions during slow periods.</p>
+        </div>
+    `);
+    
+    // Volatility insight
+    const stdDev = calculateStandardDeviation(futureYhat);
+    const volatility = (stdDev / avgForecast) * 100;
+    
+    if (volatility > 20) {
+        insights.push(`
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>High Sales Volatility</h5>
+                <p>The forecast shows high volatility (${volatility.toFixed(1)}%) in daily sales over the next ${periods} days.</p>
+                <p><strong>Recommendation:</strong> Prepare for fluctuating demand and maintain flexible staffing.</p>
+            </div>
+        `);
+    } else if (volatility < 10) {
+        insights.push(`
+            <div class="alert alert-info">
+                <h5><i class="fas fa-check-circle me-2"></i>Stable Sales Pattern</h5>
+                <p>The forecast shows stable daily sales with low volatility (${volatility.toFixed(1)}%) over the next ${periods} days.</p>
+                <p><strong>Recommendation:</strong> Maintain consistent inventory and staffing levels.</p>
+            </div>
+        `);
+    }
+    
+    // Render insights
+    insightsContainer.innerHTML = insights.join('');
+}
+
+function calculateStandardDeviation(values) {
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const squareDiffs = values.map(value => {
+        const diff = value - mean;
+        return diff * diff;
+    });
+    const avgSquareDiff = squareDiffs.reduce((sum, val) => sum + val, 0) / squareDiffs.length;
+    return Math.sqrt(avgSquareDiff);
+}
+
+function showForecastError(message) {
+    document.getElementById('forecastMessage').style.display = 'block';
+    document.getElementById('forecastChartContainer').style.display = 'none';
+    document.getElementById('forecastStatsRow').style.display = 'none';
+    document.getElementById('forecastComponentsCard').style.display = 'none';
+    document.getElementById('forecastInsightsCard').style.display = 'none';
+    
+    document.getElementById('forecastMessage').innerHTML = `
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>${message}
+        </div>
+    `;
+}
+
+function applyForecastFilters() {
+    // This will re-run the forecast with the current filters
+    generateForecast();
+}
+</script>
+{% endblock %}

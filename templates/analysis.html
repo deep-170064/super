@@ -1,0 +1,682 @@
+{% extends "layout.html" %}
+
+{% block title %}Advanced Analysis - Supermarket Sales Dashboard{% endblock %}
+
+{% block additional_head %}
+<style>
+.insight-card {
+    transition: transform 0.3s ease;
+    margin-bottom: 1rem;
+}
+.insight-card:hover {
+    transform: translateY(-5px);
+}
+.analysis-container {
+    min-height: 400px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2"><i class="fas fa-chart-pie me-2"></i>Advanced Analysis</h1>
+        <div>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-filter me-1"></i>Filter Options
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card bg-dark">
+            <div class="card-body">
+                <form id="analysisFilterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="categoryFilterAnalysis" class="form-label">Product Category</label>
+                        <select class="form-select" id="categoryFilterAnalysis" name="category">
+                            <option value="All" selected>All Categories</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="customerTypeFilterAnalysis" class="form-label">Customer Type</label>
+                        <select class="form-select" id="customerTypeFilterAnalysis" name="customer_type">
+                            <option value="All" selected>All Types</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="genderFilterAnalysis" class="form-label">Gender</label>
+                        <select class="form-select" id="genderFilterAnalysis" name="gender">
+                            <option value="All" selected>All Genders</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="analysisType" class="form-label">Analysis Type</label>
+                        <select class="form-select" id="analysisType" name="analysis_type">
+                            <option value="segmentation" selected>Customer Segmentation</option>
+                            <option value="correlation">Correlation Analysis</option>
+                            <option value="product">Product Analysis</option>
+                            <option value="time">Time-based Analysis</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Date Range</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="date" class="form-control" id="startDateAnalysis" name="start_date">
+                            </div>
+                            <div class="col-auto">to</div>
+                            <div class="col">
+                                <input type="date" class="form-control" id="endDateAnalysis" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-chart-pie me-1"></i>Generate Analysis
+                        </button>
+                        <button type="button" id="resetAnalysisFiltersBtn" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Tabs -->
+    <ul class="nav nav-tabs" id="analysisTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="segmentation-tab" data-bs-toggle="tab" data-bs-target="#segmentation" type="button" role="tab">
+                <i class="fas fa-users me-1"></i>Customer Segmentation
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="correlation-tab" data-bs-toggle="tab" data-bs-target="#correlation" type="button" role="tab">
+                <i class="fas fa-project-diagram me-1"></i>Correlation Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="product-tab" data-bs-toggle="tab" data-bs-target="#product" type="button" role="tab">
+                <i class="fas fa-box me-1"></i>Product Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="time-tab" data-bs-toggle="tab" data-bs-target="#time" type="button" role="tab">
+                <i class="fas fa-clock me-1"></i>Time Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="churn-tab" data-bs-toggle="tab" data-bs-target="#churn" type="button" role="tab">
+                <i class="fas fa-user-minus me-1"></i>Churn Prediction
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+                <i class="fas fa-lightbulb me-1"></i>Insights
+            </button>
+        </li>
+    </ul>
+    <div class="tab-content" id="analysisTabContent">
+        <!-- Customer Segmentation Tab -->
+        <div class="tab-pane fade show active" id="segmentation" role="tabpanel" aria-labelledby="segmentation-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h3 class="h5 mb-3">Customer Segmentation Analysis</h3>
+                            <div class="form-group mb-3">
+                                <label for="clusterCount" class="form-label">Number of Clusters</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range me-2" id="clusterCount" min="2" max="6" value="3">
+                                    <span id="clusterCountValue">3</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mb-3" id="runSegmentationBtn">
+                                <i class="fas fa-play me-1"></i>Run Segmentation
+                            </button>
+                            <div class="analysis-container">
+                                <div id="segmentationChart" style="width: 100%; height: 400px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h3 class="h5 mb-3">Segment Profiles</h3>
+                            <div id="segmentProfiles">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>Run the segmentation analysis to view segment profiles.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Correlation Analysis Tab -->
+        <div class="tab-pane fade" id="correlation" role="tabpanel" aria-labelledby="correlation-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Correlation Analysis</h3>
+                    <p>Discover relationships between different variables in your sales data.</p>
+                    <div class="analysis-container">
+                        <div id="correlationHeatmap" style="width: 100%; height: 500px;"></div>
+                    </div>
+                    <div class="row mt-4" id="correlationInsights">
+                        <div class="col-12">
+                            <h4 class="h6 mb-3">Key Insights</h4>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>Click "Generate Analysis" to view correlation insights.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Product Analysis Tab -->
+        <div class="tab-pane fade" id="product" role="tabpanel" aria-labelledby="product-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Product Category Analysis</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div id="categoryPerformanceChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div id="categoryQuantityChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                    </div>
+                    <h4 class="h6 mb-3">Product Performance Matrix</h4>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped" id="productMatrix">
+                            <thead>
+                                <tr>
+                                    <th>Product Category</th>
+                                    <th>Total Sales</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Avg. Unit Price</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Analysis Tab -->
+        <div class="tab-pane fade" id="time" role="tabpanel" aria-labelledby="time-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Time-based Analysis</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div id="hourlyDistributionChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div id="dayOfWeekChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-12">
+                            <h4 class="h6 mb-3">Sales Heatmap (Day of Week vs. Hour)</h4>
+                            <div id="timeHeatmapChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Churn Prediction Tab -->
+        <div class="tab-pane fade" id="churn" role="tabpanel" aria-labelledby="churn-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="h5 mb-0">Customer Churn Prediction</h3>
+                        <button class="btn btn-outline-primary" id="runChurnPredictionBtn">
+                            <i class="fas fa-play me-1"></i>Run Churn Analysis
+                        </button>
+                    </div>
+                    
+                    <div id="churnContainer">
+                        <div class="alert alert-info mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>About Churn Prediction:</strong> This analysis identifies customers at risk of churning (discontinuing their business with you). Apply filters to target specific customer segments.
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <div class="card bg-dark border-primary h-100">
+                                    <div class="card-body text-center">
+                                        <h4 class="h6 mb-3">Churn Rate</h4>
+                                        <div class="display-4 mb-2" id="churnRateDisplay">-</div>
+                                        <div class="progress mb-3" style="height: 10px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" id="churnRateProgress" style="width: 0%"></div>
+                                        </div>
+                                        <p class="text-muted small mb-0">Percentage of customers predicted to churn</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card bg-dark border-primary h-100">
+                                    <div class="card-body text-center">
+                                        <h4 class="h6 mb-3">Customer Counts</h4>
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <div class="text-danger display-6 mb-1" id="churnCount">-</div>
+                                                <div class="small">At Risk</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="text-success display-6 mb-1" id="retainedCount">-</div>
+                                                <div class="small">Retained</div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3" id="customerCountChart" style="height: 110px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card bg-dark border-primary h-100">
+                                    <div class="card-body text-center">
+                                        <h4 class="h6 mb-3">Model Performance</h4>
+                                        <div class="display-6 mb-2" id="modelAccuracy">-</div>
+                                        <div class="mb-2">Model Accuracy</div>
+                                        <div class="small mb-2" id="modelDataSize">Based on - samples</div>
+                                        <div class="badge bg-primary mt-2" id="modelType">Random Forest</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card bg-dark">
+                                    <div class="card-body">
+                                        <h4 class="h6 mb-3">Feature Importance</h4>
+                                        <p class="small mb-3">Factors that most influence customer churn predictions</p>
+                                        <div id="featureImportanceChart" style="height: 300px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="card bg-dark">
+                                    <div class="card-body">
+                                        <h4 class="h6 mb-3">Churn Risk Recommendations</h4>
+                                        <div id="churnRecommendations">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-sync-alt me-2"></i>Run the analysis to get targeted recommendations.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="churnLoadingState" class="text-center py-5" style="display: none;">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mb-0">Analyzing customer data and training prediction model...</p>
+                    </div>
+                    
+                    <div id="churnErrorState" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span id="churnErrorMessage">An error occurred during analysis.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Insights Tab -->
+        <div class="tab-pane fade" id="insights" role="tabpanel" aria-labelledby="insights-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="h5 mb-0">Business Insights & Recommendations</h3>
+                        <button class="btn btn-outline-primary" id="generateInsightsBtn">
+                            <i class="fas fa-sync-alt me-1"></i>Generate Insights
+                        </button>
+                    </div>
+                    
+                    <div id="insightsContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" id="insightsSpinner" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mb-0" id="insightsMessage">Click "Generate Insights" to analyze your data and receive actionable recommendations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="analysisLoadingOverlay">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2">Analyzing data...</div>
+</div>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize analysis page
+    initializeAnalysis();
+    
+    // Cluster count slider
+    const clusterCountSlider = document.getElementById('clusterCount');
+    const clusterCountValue = document.getElementById('clusterCountValue');
+    
+    clusterCountSlider.addEventListener('input', function() {
+        clusterCountValue.textContent = this.value;
+    });
+    
+    // Tab change handling
+    const analysisTabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    analysisTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.getAttribute('data-bs-target').substring(1);
+            loadAnalysisTab(targetId);
+        });
+    });
+    
+    // Initialize first tab
+    loadAnalysisTab('segmentation');
+});
+
+// Helper function to get filters from form
+function getFiltersFromForm(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return {};
+    
+    const filters = {};
+    
+    // Get category filter
+    const categorySelect = form.querySelector('[name="category"]');
+    if (categorySelect && categorySelect.value !== 'All') {
+        filters.category = categorySelect.value;
+    }
+    
+    // Get customer type filter
+    const customerTypeSelect = form.querySelector('[name="customer_type"]');
+    if (customerTypeSelect && customerTypeSelect.value !== 'All') {
+        filters.customer_type = customerTypeSelect.value;
+    }
+    
+    // Get gender filter
+    const genderSelect = form.querySelector('[name="gender"]');
+    if (genderSelect && genderSelect.value !== 'All') {
+        filters.gender = genderSelect.value;
+    }
+    
+    // Get date range filters
+    const startDateInput = form.querySelector('[name="start_date"]');
+    const endDateInput = form.querySelector('[name="end_date"]');
+    
+    if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+        filters.date_range = [startDateInput.value, endDateInput.value];
+    }
+    
+    return filters;
+}
+
+function loadAnalysisTab(tabId) {
+    // Show loading overlay
+    document.getElementById('analysisLoadingOverlay').style.display = 'flex';
+    
+    setTimeout(() => {
+        switch(tabId) {
+            case 'segmentation':
+                fetchCustomerSegmentation();
+                break;
+            case 'correlation':
+                fetchCorrelationAnalysis();
+                break;
+            case 'product':
+                fetchProductAnalysis();
+                break;
+            case 'time':
+                fetchTimeAnalysis();
+                break;
+            case 'churn':
+                setupChurnPrediction();
+                break;
+            case 'insights':
+                fetchInsights();
+                break;
+        }
+        
+        // Hide loading overlay
+        document.getElementById('analysisLoadingOverlay').style.display = 'none';
+    }, 500);
+}
+
+function setupChurnPrediction() {
+    // Set up the churn prediction button
+    const runChurnPredictionBtn = document.getElementById('runChurnPredictionBtn');
+    if (runChurnPredictionBtn) {
+        runChurnPredictionBtn.addEventListener('click', performChurnPrediction);
+    }
+}
+
+function performChurnPrediction() {
+    // Show loading state
+    document.getElementById('churnContainer').style.display = 'none';
+    document.getElementById('churnErrorState').style.display = 'none';
+    document.getElementById('churnLoadingState').style.display = 'block';
+    
+    // Get filter values
+    const filters = getFiltersFromForm('analysisFilterForm');
+    
+    // Call API endpoint
+    fetch('/api/churn-prediction', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filters })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'An error occurred during churn prediction');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success && data.churn_data) {
+            displayChurnResults(data.churn_data);
+        } else {
+            throw new Error('Invalid response from server');
+        }
+    })
+    .catch(error => {
+        console.error('Churn prediction error:', error);
+        document.getElementById('churnErrorMessage').textContent = error.message || 'Failed to perform churn analysis';
+        document.getElementById('churnErrorState').style.display = 'block';
+    })
+    .finally(() => {
+        document.getElementById('churnLoadingState').style.display = 'none';
+        document.getElementById('churnContainer').style.display = 'block';
+    });
+}
+
+function displayChurnResults(churnData) {
+    // Format churn rate
+    const churnRate = churnData.churn_rate * 100;
+    document.getElementById('churnRateDisplay').textContent = `${churnRate.toFixed(1)}%`;
+    document.getElementById('churnRateProgress').style.width = `${churnRate}%`;
+    
+    // Customer counts
+    document.getElementById('churnCount').textContent = churnData.churn_count;
+    document.getElementById('retainedCount').textContent = churnData.total_customers - churnData.churn_count;
+    
+    // Model performance
+    document.getElementById('modelAccuracy').textContent = `${(churnData.accuracy * 100).toFixed(1)}%`;
+    document.getElementById('modelDataSize').textContent = `Based on ${churnData.test_size} samples`;
+    
+    // Feature importance chart
+    if (churnData.features && churnData.importances) {
+        const features = churnData.features;
+        const importances = churnData.importances;
+        
+        // Create sorted arrays for visualization
+        const featureData = features.map((feature, index) => ({
+            feature: feature,
+            importance: importances[index]
+        })).sort((a, b) => b.importance - a.importance);
+        
+        // Create Plotly bar chart
+        const plotlyData = [{
+            x: featureData.map(d => d.importance),
+            y: featureData.map(d => d.feature),
+            type: 'bar',
+            orientation: 'h',
+            marker: {
+                color: 'rgba(55, 128, 191, 0.8)',
+                line: {
+                    color: 'rgba(55, 128, 191, 1.0)',
+                    width: 1
+                }
+            }
+        }];
+        
+        const layout = {
+            margin: { l: 150, r: 20, t: 10, b: 50 },
+            xaxis: { title: 'Importance' },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#c9d1d9' }
+        };
+        
+        Plotly.newPlot('featureImportanceChart', plotlyData, layout);
+    }
+    
+    // Customer count pie chart
+    const customerChartData = [{
+        values: [churnData.churn_count, churnData.total_customers - churnData.churn_count],
+        labels: ['At Risk', 'Retained'],
+        type: 'pie',
+        marker: {
+            colors: ['#dc3545', '#198754']
+        },
+        textinfo: 'percent',
+        hole: 0.4
+    }];
+    
+    const customerChartLayout = {
+        margin: { l: 10, r: 10, t: 0, b: 0 },
+        showlegend: false,
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#c9d1d9' }
+    };
+    
+    Plotly.newPlot('customerCountChart', customerChartData, customerChartLayout);
+    
+    // Recommendations
+    generateChurnRecommendations(churnData);
+}
+
+function generateChurnRecommendations(churnData) {
+    const recommendationsContainer = document.getElementById('churnRecommendations');
+    
+    // Clear previous recommendations
+    recommendationsContainer.innerHTML = '';
+    
+    // Generate recommendations based on churn data
+    const recommendations = [];
+    
+    // High churn rate recommendation
+    if (churnData.churn_rate > 0.3) {
+        recommendations.push({
+            title: 'High Churn Rate Alert',
+            text: `Your churn rate of ${(churnData.churn_rate * 100).toFixed(1)}% is concerning. Consider implementing a customer retention program immediately.`,
+            icon: 'exclamation-triangle',
+            color: 'danger'
+        });
+    }
+    
+    // Feature-based recommendations
+    if (churnData.features && churnData.importances) {
+        const featureData = churnData.features.map((feature, index) => ({
+            feature: feature,
+            importance: churnData.importances[index]
+        })).sort((a, b) => b.importance - a.importance);
+        
+        // Top feature recommendation
+        if (featureData.length > 0) {
+            const topFeature = featureData[0];
+            
+            if (topFeature.feature === 'Days Since Last Purchase') {
+                recommendations.push({
+                    title: 'Re-engage Inactive Customers',
+                    text: 'Time since last purchase is the strongest predictor of churn. Consider implementing a re-engagement campaign targeting customers who haven\'t purchased in the last 30-60 days.',
+                    icon: 'clock',
+                    color: 'warning'
+                });
+            } else if (topFeature.feature === 'Average Purchase Value') {
+                recommendations.push({
+                    title: 'Value-Based Segmentation',
+                    text: 'Average purchase value strongly influences churn. Consider different retention strategies for high-value versus low-value customers.',
+                    icon: 'tags',
+                    color: 'primary'
+                });
+            } else if (topFeature.feature === 'Total') {
+                recommendations.push({
+                    title: 'Customer Spending Tier Program',
+                    text: 'Total spending is a key churn indicator. Implement a tiered loyalty program that rewards customers based on their total spending history.',
+                    icon: 'star',
+                    color: 'info'
+                });
+            } else if (topFeature.feature === 'Quantity') {
+                recommendations.push({
+                    title: 'Volume-Based Incentives',
+                    text: 'Purchase quantity impacts churn likelihood. Consider volume discounts or bundle offers to encourage larger purchases.',
+                    icon: 'shopping-cart',
+                    color: 'success'
+                });
+            }
+        }
+    }
+    
+    // General recommendations
+    recommendations.push({
+        title: 'Implement Feedback Collection',
+        text: 'Regularly collect customer feedback to identify issues before they lead to churn. Focus especially on customers showing warning signs.',
+        icon: 'comments',
+        color: 'info'
+    });
+    
+    // Add recommendations to container
+    if (recommendations.length === 0) {
+        recommendationsContainer.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No specific recommendations available based on current data.
+            </div>
+        `;
+    } else {
+        recommendations.forEach(rec => {
+            recommendationsContainer.innerHTML += `
+                <div class="alert alert-${rec.color} mb-2">
+                    <h5 class="alert-heading"><i class="fas fa-${rec.icon} me-2"></i>${rec.title}</h5>
+                    <p class="mb-0">${rec.text}</p>
+                </div>
+            `;
+        });
+    }
+}
+</script>
+{% endblock %}

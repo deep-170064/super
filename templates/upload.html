@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block title %}Upload Data - Supermarket Sales Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card bg-dark shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0"><i class="fas fa-upload me-2"></i>Upload Sales Data</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                        <div class="mb-4">
+                            <h5><i class="fas fa-info-circle me-2"></i>Instructions</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item bg-dark text-light">Upload a CSV file containing your supermarket sales data.</li>
+                                <li class="list-group-item bg-dark text-light">The file should include columns such as <strong>Invoice ID, Date, Time, Total, Quantity</strong>, etc.</li>
+                                <li class="list-group-item bg-dark text-light">Maximum file size: 16MB</li>
+                                <li class="list-group-item bg-dark text-light">If your file has encoding issues, try selecting a different encoding option.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select CSV File</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="encoding" class="form-label">File Encoding</label>
+                            <select class="form-select" id="encoding" name="encoding">
+                                <option value="utf-8" selected>UTF-8 (Recommended)</option>
+                                <option value="latin1">Latin-1 (ISO-8859-1)</option>
+                                <option value="cp1252">Windows-1252</option>
+                                <option value="ascii">ASCII</option>
+                            </select>
+                            <div class="form-text">
+                                If you experience encoding issues, try a different encoding option.
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload and Analyze
+                            </button>
+                            <button type="button" id="resetButton" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo me-2"></i>Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card bg-dark shadow mt-4">
+                <div class="card-header bg-info">
+                    <h5 class="card-title mb-0"><i class="fas fa-table me-2"></i>Required Data Format</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Column Name</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Invoice ID</td>
+                                    <td><span class="badge bg-success">Yes</span></td>
+                                    <td>Unique identifier for each transaction</td>
+                                </tr>
+                                <tr>
+                                    <td>Date</td>
+                                    <td><span class="badge bg-success">Yes</span></td>
+                                    <td>Date of the transaction (YYYY-MM-DD)</td>
+                                </tr>
+                                <tr>
+                                    <td>Time</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Time of the transaction (HH:MM)</td>
+                                </tr>
+                                <tr>
+                                    <td>Total</td>
+                                    <td><span class="badge bg-success">Yes</span></td>
+                                    <td>Total amount of the transaction</td>
+                                </tr>
+                                <tr>
+                                    <td>Quantity</td>
+                                    <td><span class="badge bg-success">Yes</span></td>
+                                    <td>Number of items purchased</td>
+                                </tr>
+                                <tr>
+                                    <td>Unit price</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Price per unit</td>
+                                </tr>
+                                <tr>
+                                    <td>Product line</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Category of the product</td>
+                                </tr>
+                                <tr>
+                                    <td>Payment</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Payment method used</td>
+                                </tr>
+                                <tr>
+                                    <td>Gender</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Customer's gender</td>
+                                </tr>
+                                <tr>
+                                    <td>Customer type</td>
+                                    <td><span class="badge bg-warning">Optional</span></td>
+                                    <td>Type of customer (e.g., Member, Normal)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block additional_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    const resetButton = document.getElementById('resetButton');
+    const fileInput = document.getElementById('file');
+    
+    resetButton.addEventListener('click', function() {
+        uploadForm.reset();
+        // Reset the file input
+        fileInput.value = '';
+    });
+    
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            const fileName = this.files[0].name;
+            const fileSize = (this.files[0].size / 1024 / 1024).toFixed(2);
+            
+            // Check file extension
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            if (fileExt !== 'csv') {
+                alert('Please select a CSV file.');
+                this.value = '';
+                return;
+            }
+            
+            // Check file size
+            if (this.files[0].size > 16 * 1024 * 1024) {
+                alert('File size exceeds the maximum limit of 16MB.');
+                this.value = '';
+                return;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
