@@ -209,30 +209,74 @@ function generatePaymentMethodChart(data) {
     const methods = Object.keys(paymentSales);
     const sales = Object.values(paymentSales);
     
-    // Create the chart using Plotly
+    // Create the chart using Plotly with enhanced 3D effects
     const chartData = [{
         labels: methods,
         values: sales,
         type: 'pie',
-        hole: 0.4,
+        hole: 0.35,
+        pull: [0.05, 0, 0, 0],  // Pull out the first slice for emphasis
         marker: {
-            colors: ['#3366CC', '#DC3912', '#FF9900', '#109618']
+            colors: [
+                'rgba(13, 110, 253, 0.9)',   // Blue gradient
+                'rgba(220, 53, 69, 0.9)',     // Red gradient
+                'rgba(255, 193, 7, 0.9)',     // Yellow gradient
+                'rgba(25, 135, 84, 0.9)'      // Green gradient
+            ],
+            line: {
+                color: 'rgba(255, 255, 255, 0.3)',
+                width: 3
+            }
         },
         textinfo: 'label+percent',
-        textposition: 'outside'
+        textposition: 'auto',
+        textfont: {
+            size: 14,
+            color: '#fff',
+            family: 'Arial, sans-serif'
+        },
+        hoverinfo: 'label+value+percent',
+        hoverlabel: {
+            bgcolor: 'rgba(0, 0, 0, 0.8)',
+            bordercolor: 'rgba(13, 110, 253, 0.5)',
+            font: {
+                color: '#fff',
+                size: 14
+            }
+        }
     }];
     
     const layout = {
-        title: 'Sales by Payment Method',
+        title: {
+            text: 'Sales by Payment Method',
+            font: {
+                size: 18,
+                color: '#fff'
+            }
+        },
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
         font: {
             color: '#fff'
         },
-        showlegend: false
+        showlegend: true,
+        legend: {
+            orientation: 'v',
+            x: 1,
+            y: 0.5,
+            bgcolor: 'rgba(0, 0, 0, 0.3)',
+            bordercolor: 'rgba(255, 255, 255, 0.1)',
+            borderwidth: 1
+        },
+        margin: {
+            t: 40,
+            b: 20,
+            l: 20,
+            r: 100
+        }
     };
     
-    Plotly.newPlot('paymentMethodChart', chartData, layout);
+    Plotly.newPlot('paymentMethodChart', chartData, layout, {responsive: true});
 }
 
 // Generate sales trend chart
@@ -339,79 +383,142 @@ function generateDemographicsCharts(data) {
         const genders = Object.keys(genderSales);
         const sales = Object.values(genderSales);
         
-        // Create the chart using Plotly
+        // Create the chart using Plotly with enhanced 3D effects
         const chartData = [{
             labels: genders,
             values: sales,
             type: 'pie',
-            hole: 0.4,
+            hole: 0.35,
+            pull: [0.05, 0.05],  // Pull out both slices slightly
             marker: {
-                colors: ['#5D69B1', '#E58606']
+                colors: [
+                    'rgba(93, 105, 177, 0.9)',    // Purple-blue
+                    'rgba(229, 134, 6, 0.9)'      // Orange
+                ],
+                line: {
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    width: 3
+                }
             },
             textinfo: 'label+percent',
-            textposition: 'inside'
+            textposition: 'auto',
+            textfont: {
+                size: 13,
+                color: '#fff'
+            },
+            hoverinfo: 'label+value+percent',
+            hoverlabel: {
+                bgcolor: 'rgba(0, 0, 0, 0.8)',
+                bordercolor: 'rgba(93, 105, 177, 0.5)',
+                font: {
+                    color: '#fff',
+                    size: 13
+                }
+            }
         }];
         
         const layout = {
-            title: 'Sales by Gender',
+            title: {
+                text: 'Gender',
+                font: {
+                    size: 16,
+                    color: '#fff'
+                }
+            },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: {
                 color: '#fff'
             },
-            showlegend: false
+            showlegend: false,
+            margin: {
+                t: 40,
+                b: 10,
+                l: 10,
+                r: 10
+            }
         };
         
-        Plotly.newPlot('genderDistributionChart', chartData, layout);
-    } else {
-        document.getElementById('genderDistributionChart').innerHTML = 
-            '<div class="alert alert-warning">Gender or Total columns missing</div>';
+        Plotly.newPlot('genderDistributionChart', chartData, layout, {responsive: true});
     }
     
-    // Customer type chart
+    // Customer type distribution chart
     if (data.sample_data[0].hasOwnProperty('Customer type') && data.sample_data[0].hasOwnProperty('Total')) {
         // Group by customer type and sum sales
-        const customerSales = {};
+        const typeSales = {};
         data.sample_data.forEach(row => {
             const type = row['Customer type'];
             const total = parseFloat(row.Total) || 0;
             
             if (type) {
-                if (!customerSales[type]) {
-                    customerSales[type] = 0;
+                if (!typeSales[type]) {
+                    typeSales[type] = 0;
                 }
-                customerSales[type] += total;
+                typeSales[type] += total;
             }
         });
         
         // Convert to arrays for plotting
-        const types = Object.keys(customerSales);
-        const sales = Object.values(customerSales);
+        const types = Object.keys(typeSales);
+        const sales = Object.values(typeSales);
         
-        // Create the chart using Plotly
+        // Create the chart using Plotly with enhanced 3D effects
         const chartData = [{
             labels: types,
             values: sales,
             type: 'pie',
-            hole: 0.4,
+            hole: 0.35,
+            pull: [0.05, 0.05],  // Pull out both slices
             marker: {
-                colors: ['#52BCA3', '#99C945']
+                colors: [
+                    'rgba(82, 188, 163, 0.9)',    // Teal
+                    'rgba(153, 201, 69, 0.9)'     // Lime green
+                ],
+                line: {
+                    color: 'rgba(255, 255, 255, 0.3)',
+                    width: 3
+                }
             },
             textinfo: 'label+percent',
-            textposition: 'inside'
+            textposition: 'auto',
+            textfont: {
+                size: 13,
+                color: '#fff'
+            },
+            hoverinfo: 'label+value+percent',
+            hoverlabel: {
+                bgcolor: 'rgba(0, 0, 0, 0.8)',
+                bordercolor: 'rgba(82, 188, 163, 0.5)',
+                font: {
+                    color: '#fff',
+                    size: 13
+                }
+            }
         }];
         
         const layout = {
-            title: 'Sales by Customer Type',
+            title: {
+                text: 'Customer Type',
+                font: {
+                    size: 16,
+                    color: '#fff'
+                }
+            },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: {
                 color: '#fff'
             },
-            showlegend: false
+            showlegend: false,
+            margin: {
+                t: 40,
+                b: 10,
+                l: 10,
+                r: 10
+            }
         };
         
-        Plotly.newPlot('customerTypeChart', chartData, layout);
+        Plotly.newPlot('customerTypeChart', chartData, layout, {responsive: true});
     } else {
         document.getElementById('customerTypeChart').innerHTML = 
             '<div class="alert alert-warning">Customer type or Total columns missing</div>';

@@ -427,8 +427,8 @@ function displaySegmentationResults(data) {
     // Create dummy data for visualization since we don't have actual coordinates
     // In a real scenario, you'd use the actual features used for clustering
     for (let i = 0; i < data.n_clusters; i++) {
-        const cluster = clusters.find(c => c.Cluster === i) || { 
-            Cluster: i, 
+        const cluster = clusters.find(c => c.Cluster_ === i) || { 
+            Cluster_: i, 
             Total_mean: Math.random() * 100, 
             Quantity_mean: Math.random() * 10,
             Total_count: Math.round(Math.random() * 100)
@@ -477,7 +477,19 @@ function displaySegmentationResults(data) {
     
     // Display segment profiles
     const segmentProfiles = document.getElementById('segmentProfiles');
+    if (!segmentProfiles) {
+        console.error('segmentProfiles element not found!');
+        return;
+    }
+    
     segmentProfiles.innerHTML = '';
+    
+    // Check if clusters exist and have data
+    if (!clusters || clusters.length === 0) {
+        segmentProfiles.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No cluster data available</div>';
+        console.warn('No clusters data found');
+        return;
+    }
     
     clusters.forEach(cluster => {
         const card = document.createElement('div');
@@ -486,7 +498,7 @@ function displaySegmentationResults(data) {
         const cardHeader = document.createElement('div');
         cardHeader.className = 'card-header d-flex justify-content-between align-items-center';
         cardHeader.innerHTML = `
-            <h6 class="mb-0">Cluster ${cluster.Cluster}</h6>
+            <h6 class="mb-0">Cluster ${cluster.Cluster_}</h6>
             <span class="badge bg-primary">${cluster.Total_count || 0} customers</span>
         `;
         
@@ -501,8 +513,8 @@ function displaySegmentationResults(data) {
             <p class="mb-1"><strong>Avg. Purchase:</strong> $${avgTotal}</p>
             <p class="mb-1"><strong>Avg. Quantity:</strong> ${avgQuantity} items</p>
             <p class="mb-1"><strong>Total Sales:</strong> $${totalSales}</p>
-            <p class="mb-0 text-${getSegmentActionColor(cluster.Cluster)}">
-                ${getSegmentActionText(cluster.Cluster, parseFloat(avgTotal), parseFloat(avgQuantity))}
+            <p class="mb-0 text-${getSegmentActionColor(cluster.Cluster_)}">
+                ${getSegmentActionText(cluster.Cluster_, parseFloat(avgTotal), parseFloat(avgQuantity))}
             </p>
         `;
         

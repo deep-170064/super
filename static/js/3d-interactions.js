@@ -1,7 +1,11 @@
 // 3D Interaction Enhancements
 document.addEventListener('DOMContentLoaded', function() {
-    // Add 3D tilt effect to cards on mouse move
-    const cards = document.querySelectorAll('.card, .card-stat, .insight-card, .forecast-stats');
+    // Skip 3D effects on analysis page
+    const isAnalysisPage = window.location.pathname.includes('/analysis');
+    
+    // Add 3D tilt effect to cards on mouse move (except on analysis page)
+    const cardSelector = isAnalysisPage ? '.card-stat, .forecast-stats' : '.card, .card-stat, .insight-card, .forecast-stats';
+    const cards = document.querySelectorAll(cardSelector);
     
     cards.forEach(card => {
         // Store original transform
