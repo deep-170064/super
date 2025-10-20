@@ -416,7 +416,7 @@ function fetchCustomerSegmentation() {
     });
 }
 
-// Display segmentation results
+// Display segmentation results - Updated for Cluster_ field
 function displaySegmentationResults(data) {
     // Create scatter plot visualization of clusters
     const clusters = data.clusters;
