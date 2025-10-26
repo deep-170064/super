@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def clean_data(df):
     try:
         logging.info(f"Initial Data Shape: {df.shape}")
-        df = df.drop_duplicates().fillna(method='ffill')
+        df = df.drop_duplicates().ffill()
         logging.info(f"After Removing Duplicates: {df.shape}")
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
