@@ -419,7 +419,24 @@ function fetchCustomerSegmentation() {
 // Display segmentation results - Updated for Cluster_ field
 function displaySegmentationResults(data) {
     // Create scatter plot visualization of clusters
-    const clusters = data.clusters;
+    let clusters = data.clusters || [];
+    // Debug: show what was received for clusters (console)
+    try {
+        console.debug('Segmentation response clusters:', clusters);
+    } catch (e) {
+        console.debug('Segmentation response clusters (unserializable)');
+    }
+
+    // Also populate an on-page debug element if present
+    try {
+        const rawEl = document.getElementById('segmentRawResponse');
+        if (rawEl) {
+            rawEl.style.display = 'block';
+            rawEl.textContent = JSON.stringify(data, null, 2);
+        }
+    } catch (e) {
+        // ignore
+    }
     
     // Create a colored scatter plot
     const traces = [];
@@ -475,6 +492,38 @@ function displaySegmentationResults(data) {
     
     Plotly.newPlot('segmentationChart', traces, layout);
     
+    // Normalize cluster objects to a predictable shape so rendering is robust
+    clusters = clusters.map(c => {
+        // Helper to find a key ignoring case and punctuation
+        const findKey = (obj, patterns) => {
+            const keys = Object.keys(obj || {});
+            for (const p of patterns) {
+                const lowerp = p.toLowerCase();
+                for (const k of keys) {
+                    if (k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(lowerp.replace(/[^a-z0-9]/g, ''))) {
+                        return k;
+                    }
+                }
+            }
+            return null;
+        };
+
+        const idKey = findKey(c, ['Cluster_', 'Cluster', 'cluster', 'ClusterId', 'ClusterId_']);
+        const totalMeanKey = findKey(c, ['Total_mean', 'Total mean', 'Avg_Total', 'Total_mean_']);
+        const quantityMeanKey = findKey(c, ['Quantity_mean', 'Quantity mean', 'Avg_Quantity', 'Quantity_mean_']);
+        const totalSumKey = findKey(c, ['Total_sum', 'Total sum', 'Total_sum_']);
+        const totalCountKey = findKey(c, ['Total_count', 'Total count', 'Count', 'Total_count_']);
+
+        return {
+            raw: c,
+            id: idKey ? c[idKey] : (c.Cluster_ || c.Cluster || c.cluster || 0),
+            Total_mean: totalMeanKey ? c[totalMeanKey] : (c.Total_mean || c.Total || null),
+            Quantity_mean: quantityMeanKey ? c[quantityMeanKey] : (c.Quantity_mean || c.Quantity || null),
+            Total_sum: totalSumKey ? c[totalSumKey] : (c.Total_sum || null),
+            Total_count: totalCountKey ? c[totalCountKey] : (c.Total_count || c.count || 0)
+        };
+    });
+
     // Display segment profiles
     const segmentProfiles = document.getElementById('segmentProfiles');
     if (!segmentProfiles) {
@@ -492,32 +541,37 @@ function displaySegmentationResults(data) {
     }
     
     clusters.forEach(cluster => {
+        const id = Number(cluster.id);
         const card = document.createElement('div');
         card.className = 'card bg-dark mb-3';
-        
+
         const cardHeader = document.createElement('div');
         cardHeader.className = 'card-header d-flex justify-content-between align-items-center';
         cardHeader.innerHTML = `
-            <h6 class="mb-0">Cluster ${cluster.Cluster_}</h6>
+            <h6 class="mb-0">Cluster ${id}</h6>
             <span class="badge bg-primary">${cluster.Total_count || 0} customers</span>
         `;
-        
+
         const cardBody = document.createElement('div');
         cardBody.className = 'card-body';
-        
+
         const avgTotal = cluster.Total_mean ? parseFloat(cluster.Total_mean).toFixed(2) : 'N/A';
         const avgQuantity = cluster.Quantity_mean ? parseFloat(cluster.Quantity_mean).toFixed(2) : 'N/A';
         const totalSales = cluster.Total_sum ? parseFloat(cluster.Total_sum).toFixed(2) : 'N/A';
-        
+
+        // Safely compute action text (guard against NaN)
+        const avgTotalNum = isNaN(parseFloat(avgTotal)) ? 0 : parseFloat(avgTotal);
+        const avgQtyNum = isNaN(parseFloat(avgQuantity)) ? 0 : parseFloat(avgQuantity);
+
         cardBody.innerHTML = `
             <p class="mb-1"><strong>Avg. Purchase:</strong> $${avgTotal}</p>
             <p class="mb-1"><strong>Avg. Quantity:</strong> ${avgQuantity} items</p>
             <p class="mb-1"><strong>Total Sales:</strong> $${totalSales}</p>
-            <p class="mb-0 text-${getSegmentActionColor(cluster.Cluster_)}">
-                ${getSegmentActionText(cluster.Cluster_, parseFloat(avgTotal), parseFloat(avgQuantity))}
+            <p class="mb-0 text-${getSegmentActionColor(id)}">
+                ${getSegmentActionText(id, avgTotalNum, avgQtyNum)}
             </p>
         `;
-        
+
         card.appendChild(cardHeader);
         card.appendChild(cardBody);
         segmentProfiles.appendChild(card);
@@ -1252,6 +1306,18 @@ function displayBusinessInsights(insights) {
         return;
     }
     
+    // Debug: show raw insights in console and on-page for troubleshooting
+    try {
+        console.debug('Business insights:', insights);
+        const rawEl = document.getElementById('insightsRawResponse');
+        if (rawEl) {
+            rawEl.style.display = 'block';
+            rawEl.textContent = JSON.stringify(insights, null, 2);
+        }
+    } catch (e) {
+        console.error('Could not display raw insights:', e);
+    }
+
     insightsContainer.innerHTML = '';
     
     // Create a card for each insight

@@ -146,6 +146,8 @@
                                     <i class="fas fa-info-circle me-2"></i>Run the segmentation analysis to view segment profiles.
                                 </div>
                             </div>
+                            <!-- Debug: raw segmentation response (hidden by default) -->
+                            <pre id="segmentRawResponse" style="display:none; white-space:pre-wrap; max-height:200px; overflow:auto; background:#0b1220; color:#c9d1d9; padding:10px; border-radius:6px; margin-top:10px;"></pre>
                         </div>
                     </div>
                 </div>
@@ -351,6 +353,7 @@
                             <p class="mb-0" id="insightsMessage">Click "Generate Insights" to analyze your data and receive actionable recommendations.</p>
                         </div>
                     </div>
+                    <pre id="insightsRawResponse" style="display:none; white-space:pre-wrap; max-height:200px; overflow:auto; background:#0b1220; color:#c9d1d9; padding:10px; border-radius:6px; margin-top:10px;"></pre>
                 </div>
             </div>
         </div>

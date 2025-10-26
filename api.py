@@ -26,18 +26,36 @@ def load_data():
             # Return sample data if no file is uploaded
             logging.info("No file in session - providing sample data")
             
-            # Create sample data for demonstration
+            # Create sample data for demonstration (ensure all arrays are same length)
+            n = 100
+            invoice_ids = [f'INV-{i}' for i in range(1, n+1)]
+            dates = pd.date_range(start='2023-01-01', periods=n).astype(str).tolist()
+            # Generate times cycling through hours and minutes
+            times = []
+            for i in range(n):
+                hour = 8 + (i % 12)  # hours from 8 to 19
+                minute = (i * 5) % 60
+                times.append(f"{hour}:{str(minute).zfill(2)}")
+
+            totals = [round(100 + 900 * i / (n-1), 2) for i in range(n)]
+            quantities = [i % 10 + 1 for i in range(n)]
+            unit_prices = [round(10 + 90 * i / (n-1), 2) for i in range(n)]
+            product_lines = (['Electronics', 'Food and beverages', 'Health and beauty', 'Sports and travel', 'Home and lifestyle'] * ((n // 5) + 1))[:n]
+            payments = (['Cash', 'Credit card', 'Ewallet'] * ((n // 3) + 1))[:n]
+            genders = (['Male', 'Female'] * ((n // 2) + 1))[:n]
+            customer_types = (['Member', 'Normal'] * ((n // 2) + 1))[:n]
+
             data = {
-                'Invoice ID': [f'INV-{i}' for i in range(1, 101)],
-                'Date': pd.date_range(start='2023-01-01', periods=100).astype(str).tolist(),
-                'Time': [f'{h}:{m}' for h, m in zip(range(8, 20), [str(i).zfill(2) for i in range(0, 60, 36)])]*10,
-                'Total': [round(100 + 900 * i/100, 2) for i in range(100)],
-                'Quantity': [i % 10 + 1 for i in range(100)],
-                'Unit price': [round(10 + 90 * i/100, 2) for i in range(100)],
-                'Product line': ['Electronics', 'Food and beverages', 'Health and beauty', 'Sports and travel', 'Home and lifestyle'] * 20,
-                'Payment': ['Cash', 'Credit card', 'Ewallet'] * 33 + ['Cash'],
-                'Gender': ['Male', 'Female'] * 50,
-                'Customer type': ['Member', 'Normal'] * 50
+                'Invoice ID': invoice_ids,
+                'Date': dates,
+                'Time': times,
+                'Total': totals,
+                'Quantity': quantities,
+                'Unit price': unit_prices,
+                'Product line': product_lines,
+                'Payment': payments,
+                'Gender': genders,
+                'Customer type': customer_types
             }
             
             df = pd.DataFrame(data)
@@ -487,6 +505,11 @@ def perform_customer_segmentation():
             return jsonify({'error': f'Error processing segmentation results: {str(e)}'}), 500
         
         # Convert to list of dicts for JSON response
+        # Frontend expects the cluster id field to be named 'Cluster_' (see static/js/charts.js)
+        # ensure the column name matches that expectation
+        if 'Cluster' in cluster_stats.columns:
+            cluster_stats = cluster_stats.rename(columns={'Cluster': 'Cluster_'})
+
         clusters = cluster_stats.to_dict('records')
         
         return jsonify({
